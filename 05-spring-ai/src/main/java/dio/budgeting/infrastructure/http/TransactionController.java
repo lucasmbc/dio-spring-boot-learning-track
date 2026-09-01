@@ -1,5 +1,6 @@
 package dio.budgeting.infrastructure.http;
 
+import dio.budgeting.application.GetTotalByCategoryUseCase;
 import dio.budgeting.application.ListTransactionsByCategoryUseCase;
 import dio.budgeting.application.PersistTransactionUseCase;
 import dio.budgeting.domain.Category;
@@ -24,19 +25,21 @@ import java.util.List;
 public class TransactionController {
     private final PersistTransactionUseCase persistTransactionUseCase;
     private final ListTransactionsByCategoryUseCase listTransactionsByCategoryUseCase;
+    private final GetTotalByCategoryUseCase getTotalByCategoryUseCase;
 
     private final TranscriptionModel transcriptionModel;
     private final ChatClient chatClient;
     private final TextToSpeechModel textToSpeechModel;
 
     public TransactionController(PersistTransactionUseCase persistTransactionUseCase,
-                                 ListTransactionsByCategoryUseCase listTransactionsByCategoryUseCase,
+                                 ListTransactionsByCategoryUseCase listTransactionsByCategoryUseCase, GetTotalByCategoryUseCase getTotalByCategoryUseCase,
                                  TranscriptionModel transcriptionModel,
                                  @Value("classpath:prompts/system-message.st") Resource systemPrompt,
                                  ChatClient.Builder chatClientBuilder,
                                  TextToSpeechModel textToSpeechModel) throws IOException {
         this.persistTransactionUseCase = persistTransactionUseCase;
         this.listTransactionsByCategoryUseCase = listTransactionsByCategoryUseCase;
+        this.getTotalByCategoryUseCase = getTotalByCategoryUseCase;
         this.transcriptionModel = transcriptionModel;
         this.chatClient = chatClientBuilder
                 .defaultSystem(systemPrompt.getContentAsString(Charset.defaultCharset()))
@@ -55,6 +58,11 @@ public class TransactionController {
     @GetMapping("/{category}")
     public List<TransactionResponse> readTransactions(@PathVariable Category category) {
         return listTransactionsByCategoryUseCase.execute(category).stream().map(TransactionResponse::from).toList();
+    }
+
+    @GetMapping("/total/{category}")
+    public ResponseEntity<Long> readTotalAmountTransactionsTotal(@PathVariable Category category) {
+        return ResponseEntity.ok().body(getTotalByCategoryUseCase.execute(category));
     }
 
     @PostMapping(value = "/ai", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = "audio/mp3")
